@@ -3,7 +3,8 @@ const { format } = require("util");
 const { Storage } = require("@google-cloud/storage");
 
 const storage = new Storage({ keyFilename: "google-cloud-key.json" });
-const bucket = storage.bucket("bezkoder-e-commerce");
+// const bucket = storage.bucket("smegp-public-images");
+const bucket = storage.bucket("smegp-internal-images");
 
 const upload = async (req, res) => {
   try {
@@ -27,6 +28,7 @@ const upload = async (req, res) => {
         `https://storage.googleapis.com/${bucket.name}/${blob.name}`
       );
 
+      /*
       try {
         await bucket.file(req.file.originalname).makePublic();
       } catch {
@@ -36,6 +38,7 @@ const upload = async (req, res) => {
           url: publicUrl,
         });
       }
+      */
 
       res.status(200).send({
         message: "Uploaded the file successfully: " + req.file.originalname,
@@ -68,6 +71,10 @@ const getListFiles = async (req, res) => {
       fileInfos.push({
         name: file.name,
         url: file.metadata.mediaLink,
+        selfLink: file.metadata.selfLink,
+        contentType: file.metadata.contentType,
+        size: file.metadata.size,
+        timeCreated: file.metadata.timeCreated,
       });
     });
 
@@ -93,8 +100,28 @@ const download = async (req, res) => {
   }
 };
 
+const getInternalFile = async (req, res) => {
+  try {
+    const [metaData] = await bucket.file(req.params.name).getMetadata();
+    const expires = new Date().getTime() + 1000 * 1000;
+
+    //imageFile.getSignedUrl({ action: "read", expires}).then(urls => urls[0]);
+    const file = bucket.file(req.params.name)
+    file.getSignedUrl({ action: "read", expires}).then(urls => console.log(urls[0]))
+
+
+    res.redirect(metaData.mediaLink);
+    
+  } catch (err) {
+    res.status(500).send({
+      message: "Could not download the file. " + err,
+    });
+  }
+};
+
 module.exports = {
   upload,
   getListFiles,
   download,
+  getInternalFile,
 };
